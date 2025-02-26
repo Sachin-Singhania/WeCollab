@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model Dashboard{
+  id String @id
+  name String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  code      Code? 
+  users       DashboardUser[]
+  Video Video[]
+  Request Request[]
+}
+model DashboardUser {
+  id          String        @id 
+  userId      String
+  dashboardId String
+  role        Role
+  dashboard   Dashboard  @relation(fields: [dashboardId], references: [id])
+}
+model Code{
+  id String @id
+  code String 
+  dashboardId String @unique     
+  expiresAt DateTime  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Dashboard Dashboard @relation(fields: [dashboardId], references: [id]) 
+}
+enum Role {
+  OWNER
+  EDITOR
+}
+model Video{
+  id String @id
+  name String
+  description String
+  url String
+  dashboardId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  dashboard Dashboard @relation(fields: [dashboardId], references: [id])
+}
+model Request {
+  id          String      @id
+  userId      String      
+  dashboardId String
+  status      RequestStatus @default(PENDING) 
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  dashboard   Dashboard   @relation(fields: [dashboardId], references: [id])
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}

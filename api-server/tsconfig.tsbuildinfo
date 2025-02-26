@@ -1,0 +1,1 @@
+{"root":["./src/index.ts","./src/controllers/dashboard.ts","./src/controllers/video.ts","./src/middlewares/multer.ts","./src/middlewares/verify.ts","./src/routes/dashboard.ts","./src/routes/video.ts","./src/types/types.ts","./src/utils/feature.ts"],"version":"5.7.2"}
