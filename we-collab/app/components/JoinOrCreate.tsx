@@ -9,6 +9,9 @@ import { X } from 'lucide-react'
 import useUserStore from '../store/store'
 import axios from 'axios'
 import { useRouter } from 'next/navigation'
+import { join, newDashboard } from '../hook/Api'
+import useDashboardStore from '../store/dashboard'
+import { toast } from 'sonner'
 
 interface JoinOrCreateProps {
   onClose?: () => void
@@ -17,31 +20,53 @@ interface JoinOrCreateProps {
 export default function JoinOrCreate({ onClose }: JoinOrCreateProps) {
   const [joinCode, setJoinCode] = useState('')
   const [projectName, setProjectName] = useState('')
-  //@ts-ignore
   const {user}= useUserStore();
+  const {setDashboard,setRole}= useDashboardStore();
     const navigate= useRouter();
-  const handleJoin = () => {
-    console.log('Joining with code:', joinCode);
+  const handleJoin = async() => {
+    try {
+      
+      console.log('Joining with code:', joinCode);
+      const dashJoin= await join(joinCode);
+      if(dashJoin){
+        toast.success ('Joined Request Sent to Dashboard Owner',{
+          position: "top-right",
+          richColors : true,
+        });
+      } 
+    }
+    catch (error: any) {
+       console.error('Error joining dashboard:', error);
+       toast.error(`Error joining dashboard: ${error?.response?.data?.message || "Unknown error"}`, {
+        position: "top-right",
+        richColors: true,
+      });
+    }
+    return;      
   }
 
   const handleCreate = async() => {
-    if (user==null) {
-        alert('Please login first');
-    }
+    if (!user) return;
+   
     const name= projectName.trim();
     if(projectName.trim()==""){
         return;
     }
     try {
-        console.log('Creating project with name:', name)
-        const response = await axios.post("http://localhost:3010/dashboard/api/v1/dashboard/new", {
-            name,
-            ownerId:user.id,
-          });
-          console.log(response.data);
-          navigate.push("/dashboard/"+response.data.id);
-    } catch (error) {
+        const data = await newDashboard(name,user.id)
+        toast.success ('Dashboard created successfully' ,{
+          position: "top-right",
+          richColors : true,
+        });
+        setDashboard(data);
+        setRole('OWNER');
+        navigate.push("/dashboard");
+    } catch (error:any) {
          console.error(error);
+         toast.error(`Error joining dashboard: ${error?.response?.data?.message || "Unknown error"}`, {
+          position: "top-right",
+          richColors: true,
+        });
     }
   }
 

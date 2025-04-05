@@ -9,6 +9,8 @@ import { useState } from "react"
 import useUserStore from "../store/store"
 import { useRouter } from "next/navigation"
 import useDashboardStore from "../store/dashboard"
+import { fetchDashboard, signin } from "../hook/Api"
+import { toast } from "sonner"
 
 
 export default function SignInPage() {
@@ -18,44 +20,32 @@ export default function SignInPage() {
   const navigator = useRouter();
   //@ts-ignore
   const setUser = useUserStore((state) => state.setUser);
-  const {setDashboard,setRole} = useDashboardStore();
-
   const handleSignIn = async () => {
-    setError(""); // Reset the error message
+    setError(""); 
     try {
-      const response = await axios.post("http://localhost:3010/user/api/v1/user/signin", {
-        Email:email,
-        Password:password,
-      },{
-        withCredentials : true,
-      });
-      const data = response.data; 
-      console.log("Sign-in successful:", data);
-      if(response.status === 200){
-        setUser(data.user);
+      const data = await signin(email, password);
+        setUser(data?.user);
+        toast.success("Sign in successful", {
+          richColors : true,position:"top-right"
+        });
         try {
-          
-          const dashbaord = await axios.get('http://localhost:3010/dashboard/api/v1/dashboard/get',{
-            withCredentials : true
-           });
-           if (dashbaord.status === 200){
-            let fdata=dashbaord.data[0];
-            setRole(fdata.role);
-            setDashboard(fdata.dashbaord);
-            navigator.push(`/dashboard/${fdata?.role.toLowerCase()}`);
-          }else{
-            navigator.push("/");
-          }
+            navigator.push(`/dashboard`);
         } catch (error) {
+            navigator.push("/");
             console.error("Error fetching dashboard data:", error);
         }
-      }
-
     } catch (err) {
       console.log(err)
       if (axios.isAxiosError(err) && err.response && err.response.data && err.response.data.message) {
-        setError(err.response.data.message); // Use backend's error message
+        setError(err.response.data.message); 
+        toast.error(err.response.data.message, {
+          richColors : true,position:"top-right"
+          });
       } else {
+        toast.error("Internal Server Error", {
+          richColors: true,
+          position: "top-right",
+          });
         setError("Something went wrong. Please try again.");
       }
     }

@@ -12,10 +12,10 @@ class User{
     public static getInstance(){
        if(!this.instance)
         this.instance=new User();
-    return this.instance;
+        return this.instance;
     }
     routes(){
-        this.app.post('/signup',Signup  as unknown as RequestHandler);
+        this.app.post('/signup',Signup as unknown as RequestHandler );
         this.app.post('/signin',Signin as unknown as RequestHandler);
         this.app.get('/get',isAuthenticated as unknown as RequestHandler,getUser as unknown as RequestHandler);
         this.app.post('/storeTokens',isAuthenticated as unknown as RequestHandler, Update as unknown as RequestHandler);

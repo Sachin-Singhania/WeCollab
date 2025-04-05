@@ -8,6 +8,9 @@ import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import axios from "axios"
 import useUserStore from "../store/store"
+import { signup } from "../hook/Api"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 
 export default function SignUpPage() {
@@ -16,28 +19,30 @@ export default function SignUpPage() {
   const [password, setPassword] = useState("");
   const [ConfirmPassword, setconfirmPassword] = useState("");
   const [error, setError] = useState("");
-  //@ts-ignore
+  const nav= useRouter();
   const setUser = useUserStore((state) => state.setUser);
   const handleSignup = async () => {
     setError(""); 
-
     try {
-      const response = await axios.post("http://localhost:3010/user/api/v1/user/signup", {
-        Email:email,
-        Password:password,
-        ConfirmPassword,
-        Name:name
-      }, { withCredentials: true });
-      console.log(response.data);
-    
-      const data = response.data;
-      if(response.status === 200){
+      const data = await signup(email, name, password, ConfirmPassword);
         setUser(data);
+        toast.success("Sign up successful, Click Get Start to Create or Join Dashboard", {
+          richColors : true,position:"top-right"
+        });
+        nav.push("/");
+    } catch (err:any) {
+      if (axios.isAxiosError(err) && err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message); 
+        toast.error(err.response.data.message, {
+          richColors : true,position:"top-right"
+          });
+      } else{
+        toast. error("Internal Server Error", {
+          richColors: true,
+          position: "top-right",
+        });
+        setError(err?.message);
       }
-      console.log("Sign-in successful:", data.user);
-    } catch (err) {
-      //@ts-ignore
-      setError(err.message);
     }
   };
   return (

@@ -9,13 +9,11 @@ import { PrismaClient } from '@prisma/client';
 config({
     path: `./.env`
 });
-
 class Server{
     port = process.env.PORT || 3000;
     app: express.Application;
     private static instance: Server;
     prisma : PrismaClient;
-    private whitelist = ['http://localhost:3000', 'https://dms-organize.vercel.app']
     private constructor(){
         this.app = express()
         this.port = process.env.PORT || 3000;

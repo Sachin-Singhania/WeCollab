@@ -7,6 +7,7 @@ import { Role } from "@prisma/client";
 export const JoinDashboard = async (req: Request<{}, {}, Join>, res: Response) => {
     try {
         const { code } = req.body;
+        if(!code) return res.status(HttpStatusCode.BAD_REQUEST).json({ message: "Code is required" });
         const {_id}= req.user;
         console.log(_id);
         const codeCheck = await prisma.code.findFirst({
@@ -90,6 +91,9 @@ export const JoinDashboard = async (req: Request<{}, {}, Join>, res: Response) =
 export const NewDashboard = async (req: Request<{}, {}, Dashboard>, res: Response) => {
     try {
         const { name, ownerId } = req.body;
+        if (!name || !ownerId) { 
+            return res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Name and owner id are required'});
+        }
         const dashboard = await prisma.dashboard.findFirst({
             where: {
                 users: {
@@ -113,9 +117,28 @@ export const NewDashboard = async (req: Request<{}, {}, Dashboard>, res: Respons
                         role: 'OWNER'
                     }
                 }
-            },
+            },select :{
+                id:true,
+                name:true,
+                Video:{
+                    select: {
+                        id: true,
+                        name: true,
+                        uploadedBy: true,
+                      }
+                },
+                YoutubeUpload:{
+                    select: { id: true, title: true }
+                },
+                Request:{
+                    select:{
+                        userId :true,
+                        id :true,
+                    }
+                }
+            }
         });
-        return res.status(HttpStatusCode.CREATED).json({ message: 'Dashboard created', dashboardId: newDashboard.id });
+        return res.status(HttpStatusCode.CREATED).json({ message: 'Dashboard created', dashboardId: newDashboard });
     } catch (error) {
         console.log(error);
         return res.status(HttpStatusCode.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' });
@@ -123,7 +146,11 @@ export const NewDashboard = async (req: Request<{}, {}, Dashboard>, res: Respons
 }
 export const createCode = async (req: Request, res: Response) => {
     try {
-        const { dashboardId, userId } = req.body;
+        const { dashboardId } = req.body;
+        console.log(req.body);
+        if (!dashboardId) {
+            return res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Dashboard id is required' });
+            }
         const dashboard = await prisma.dashboard.findFirst({
             where: {
                 id: dashboardId
@@ -132,7 +159,28 @@ export const createCode = async (req: Request, res: Response) => {
         if (!dashboard) {
             return res.status(HttpStatusCode.NOT_FOUND).json({ message: 'Dashboard not found' });
         }
+        const existingCode = await prisma.code.findUnique({
+            where: { dashboardId },
+        });
+        
         const code = random6DigitCode();
+        if (existingCode) {
+            const isExpired = new Date(existingCode.expiresAt) < new Date();
+            if (!isExpired) {
+                return res.status(HttpStatusCode.OK).json({ message: 'Code updated', code: existingCode.code });
+            }
+            else {
+                const updatedCode = await prisma.code.update({
+                    where: { dashboardId },
+                    data: {
+                        code: code.toString(),
+                        expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+                    },
+                    select: { code: true }
+                });
+                return res.status(HttpStatusCode.OK).json({ message: 'Code updated', code: updatedCode.code });
+            }
+        }
         const newCode = await prisma.code.create({
             data: {
                 code: code.toString(),
@@ -153,13 +201,15 @@ export const createCode = async (req: Request, res: Response) => {
 export const AcceptRequest = async (req: Request, res: Response) => {
     try {
         const {requestId,userId,dashboardId } = req.body;
+         if (!requestId || !userId || !dashboardId) {
+            return res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Request id, user id and dashboard id are required' });
+         }
         
         const userCount = await prisma.dashboardUser.count({
             where: {
                 dashboardId,
             },
         });
-        console.log(userCount);
         if (!userCount){
             return res.status(HttpStatusCode.NOT_FOUND).json({ message: 'Dashboard not found' });
         }
@@ -199,6 +249,9 @@ export const AcceptRequest = async (req: Request, res: Response) => {
  export const RejectRequest = async (req: Request, res: Response) => {
     try {
         const {requestId,dashboardId} = req.body;
+        if (!requestId || !dashboardId) {
+            return res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Request id and dashboard id are required' });
+        }
         const reject = await prisma.request.update({
             where:{
                 id: requestId,
@@ -222,6 +275,9 @@ export const AcceptRequest = async (req: Request, res: Response) => {
 export const GetRequest = async (req: Request, res: Response) => {
     try {
          const {dashboardId} = req.body;
+         if (!dashboardId) {
+            return res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Dashboard id is required' });
+         }
          const dashboard = await prisma.dashboard.findUnique({
             where: {
                 id: dashboardId
@@ -232,7 +288,7 @@ export const GetRequest = async (req: Request, res: Response) => {
                     },
                     select:{
                         userId:true,
-                        status:true,id :true
+                        id :true
                     }
                 }
             }
@@ -250,6 +306,9 @@ export const GetRequest = async (req: Request, res: Response) => {
 export const GetMembers = async (req: Request, res: Response) => {
     try {
          const {dashboardId} = req.body;
+         if (!dashboardId) {
+            return res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Dashboard id is required' });
+         }
         const {_id} = req.user;
          const dashboard = await prisma.dashboardUser.findMany({
             where :{
@@ -271,37 +330,66 @@ export const GetMembers = async (req: Request, res: Response) => {
     }
 }
 export const GetDashboard = async (req: Request, res: Response) => {
-    console.log("GETTING DASHBOARD");
     try {
         const {_id} = req.user;
-        const dashboards = await prisma.dashboardUser.findMany({
-            where: {
-              userId: _id,
-            },
-            select: {
-              role: true,
-              dashboard: {
-                select: {
-                  id: true,
-                  name: true,
-                  Video : {
-                    select:{
-                        id :true,
-                        name :true,
-                    }
+        const mergedData = await prisma.$transaction(async (prisma) => {
+            const dashboards = await prisma.dashboardUser.findMany({
+              where: { userId: _id },
+              select: {
+                role: true,
+                dashboard: {
+                  select: {
+                    id: true,
+                    name: true,
+                    Video: {
+                      select: {
+                        id: true,
+                        name: true,
+                        uploadedBy: true,
+                      },
+                    },
                   },
                 },
               },
-            },
+            });
+            
+            if (!dashboards || dashboards.length === 0) return null;
+            const dashboardData = dashboards[0].dashboard;
+            if(dashboards[0].role==="EDITOR") return {
+                id: dashboardData.id,
+                name: dashboardData.name,
+                role: dashboards[0].role,
+                Video: dashboardData.Video,
+            }
+            const YoutubeUploads = await prisma.youtubeUpload.findMany({
+              where: { dashboardId: dashboardData.id },
+              select: { id: true, title: true },
+            });
+            const Request= await prisma.request.findMany({
+                where : {dashboardId:dashboardData.id,
+                    status: 'PENDING',
+                },
+                select: {
+                    id: true,
+                    userId : true,
+                }
+            })
+            return {
+              id: dashboardData.id,
+              name: dashboardData.name,
+              role: dashboards[0].role,
+              Video: dashboardData.Video,
+              YoutubeUploads,
+              Request
+            };
           });
-          console.log(dashboards);
-        if (!dashboards) {
-            return;
-        }
-        console.log("sending",dashboards);
-        return res.status(HttpStatusCode.OK).json(dashboards);
+      
+          if (!mergedData) {
+            return res.status(HttpStatusCode.NOT_FOUND).json({ message: "Dashboard not found" });
+          }
+      
+          return res.status(HttpStatusCode.OK).json(mergedData);
     } catch (error) {
-        console.log(error);
         return;
     }
 }

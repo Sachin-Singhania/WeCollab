@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ModernFileInput } from '@/components/modern-file-input'
-import axios from 'axios'
 import useDashboardStore from '@/app/store/dashboard'
+import { VideoUploadEditor } from '@/app/hook/Api'
+import { toast } from 'sonner'
 
 export default function  UploadVideo() {
   const [file, setFile] = useState<File | null>(null)
@@ -16,37 +17,32 @@ export default function  UploadVideo() {
   const {dashboard} = useDashboardStore();
   const handleUpload = async () => {
     if (!file || !name || !dashboard?.id) {
-      console.log(dashboard?.id)
-      alert('Please provide all required fields (file, name, and dashboardId).')
+      toast.error('Please fill in all fields and select a file.')
       return
     }
 
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('name', name)
-      formData.append('description', description)
-      formData.append('dashboardId', dashboard?.id)
-      const response = await axios.post(
-        'http://localhost:3010/video/api/v1/video/upload-editor',
-        formData,
-        {
-          withCredentials: true, // Ensure cookies are sent
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      )
+      if(name.trim()==""){
+        toast.error('Please fill in the name field.')
+        return;
+      }
+      const formData = new FormData();
+    formData.append("description", description);
+    formData.append("dashboardId", dashboard?.id);
+    formData.append("name", name); 
+    formData.append("file", file);
+      const response = await VideoUploadEditor(formData);
 
-      console.log('Video uploaded successfully:', response.data)
-      alert('Video uploaded successfully!')
-      // Clear form fields after successful upload
+      toast.success('Video uploaded successfully!',{
+        position: "top-right",
+        richColors : true
+      })
       setFile(null)
       setName('')
       setDescription('')
     } catch (error) {
       console.error('Error uploading video:', error)
-      alert('Failed to upload video. Please try again.')
+      toast.error('Error uploading video.')
     }
   }
 

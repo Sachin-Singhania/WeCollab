@@ -1,30 +1,46 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ModernFileInput } from '@/components/modern-file-input'
+import { VideoUpload } from '@/app/hook/Api'
+import useDashboardStore from '@/app/store/dashboard'
+import { toast } from "sonner";
 
 export default function UploadYouTube() {
-  const router = useRouter()
-  const [file, setFile] = useState<File | null>(null)
+  const params = useParams();
+  const fileId= params.id as string;
+  const {dashboard,role}=useDashboardStore();
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [visibility, setVisibility] = useState('private')
-
+  const [visibility, setVisibility] = useState('')
+  const router = useRouter()
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Implement upload logic here
-    console.log('Uploading to YouTube:', { file, title, description, visibility })
-    // After successful upload, redirect to dashboard
-    router.push('/dashboard/youtube-owner')
+    if (!title || !description || !visibility) return;
+    if (!dashboard?.id) return;
+    if (!fileId) return;
+    try {
+       const response= await VideoUpload(fileId,dashboard?.id, title, description, visibility);
+    } catch (error) {
+      console.log('Error uploading video:', error);
+    }
   }
-
+  useEffect(() => {
+    if (!dashboard || !role) {
+      router.push("/dashboard");
+      return;
+    }
+    if (role !== "OWNER") {
+      router.push("/dashboard");
+      return;
+    }
+  }, [ dashboard, role ]);
   return (
     <div className="container mx-auto py-10">
       <Card>
@@ -34,14 +50,6 @@ export default function UploadYouTube() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="video-file">Choose Video File</Label>
-              <ModernFileInput
-                id="video-file"
-                accept="video/*"
-                onChange={(file) => setFile(file)}
-              />
-            </div>
             <div>
               <Label htmlFor="title">Title</Label>
               <Input
@@ -73,7 +81,7 @@ export default function UploadYouTube() {
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit" disabled={!file}>Upload to YouTube</Button>
+            <Button type="submit">Upload to YouTube</Button>
           </form>
         </CardContent>
       </Card>

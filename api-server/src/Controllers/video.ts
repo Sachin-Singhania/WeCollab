@@ -2,17 +2,17 @@ import { Request, Response } from "express";
 import { Join, HttpStatusCode, Dashboard,VideoRecived } from "../types/types";
 import { v4 as uuid } from "uuid";
 import fs from "fs";
+import path from "path";
 import { convertChunksToVideo, convertToHLS, getandcheckAccessToken } from "../utils/feature";
 import { prisma } from "..";
 import { google } from "googleapis";
 export const VideoUploadEditor = async (req: Request, res: Response) => {
-  console.log("I CAM HERE 1");
     try {
       const { name, description, dashboardId } = req.body;
-      if (!dashboardId) {
-        return res.status(400).json({ message: 'Dashboard ID is required' });
+      const {_id} = req.user;
+      if  (!name || !description || !dashboardId) {
+        return res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Name, description and dashboard ID are required' });
       }
-
       const dashboardExists = await prisma.dashboard.findUnique({
         where: { id: dashboardId },
       });
@@ -39,9 +39,10 @@ export const VideoUploadEditor = async (req: Request, res: Response) => {
               description,
               url: video.videoUrl,
               dashboardId,
+              uploadedBy : _id
             },
           });
-          await fs.promises.unlink(outputPath);
+          await fs.promises.unlink(filepath);
           return res.status(201).json({ message: 'Video uploaded successfully', video: videoupload });
         } catch (error) {
           console.error("Error during Prisma DB call:", error);
@@ -58,8 +59,9 @@ export const VideoUploadEditor = async (req: Request, res: Response) => {
   export const VideoUploadOwner= async (req: Request, res: Response) => {
     try{
       const { name, description, dashboardId } = req.body;
-      if (!dashboardId) {
-        return res.status(400).json({ message: 'Dashboard ID is required' });
+      const _id = req.user._id;
+      if  (!name || !description || !dashboardId) {
+        return res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Name, description and dashboard ID are required' });
       }
 
       const dashboardExists = await prisma.dashboard.findUnique({
@@ -78,6 +80,7 @@ export const VideoUploadEditor = async (req: Request, res: Response) => {
           description,
           url: filepath,
           dashboardId,
+          uploadedBy : _id
         },
       });
       return res.status(201).json({ message: 'Video uploaded successfully', video: videoupload });
@@ -90,6 +93,9 @@ export const VideoUploadEditor = async (req: Request, res: Response) => {
 export const getVideo = async (req: Request, res: Response) => {
     try {
          const { dashboardId , lessonId } = req.params;
+         if (!dashboardId || !lessonId) {
+          return res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Dashboard ID and lesson ID are required ' });
+         }
          const video = await prisma.video.findUnique({
             where: {
                 id: lessonId,
@@ -114,12 +120,16 @@ export const getVideo = async (req: Request, res: Response) => {
 export const getVideos= async (req: Request, res: Response) => {
   try {
     const { dashboardId } = req.params;
+    if (!dashboardId) { 
+      return res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Dashboard ID is required' });
+      }
     const videos = await prisma.video.findMany({
       where: {
         dashboardId: dashboardId
       },select:{
         name :true,
         id :true,
+        uploadedBy :true,
       }
     })
     if (!videos) {
@@ -136,6 +146,9 @@ export const uploadVideotoYoutube = async (req: Request, res: Response) => {
   try {
 
     const { videoId, dashboardId,title,description,privacyStatus } = req.body;
+    if (!videoId || !dashboardId || !title || !description || !privacyStatus) {
+      return res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'All fields are required' });
+    }
     const {_id}=req.user;
     console.log("I CAME HERE 2");
      if (!videoId || !dashboardId || !title || !description || !privacyStatus) {
@@ -143,12 +156,10 @@ export const uploadVideotoYoutube = async (req: Request, res: Response) => {
      }
 
      const accessToken = await getandcheckAccessToken(_id);
-     console.log(accessToken);
-     console.log("I CAME HERE 3")
      if (!accessToken.success){
        return res.status(HttpStatusCode.BAD_GATEWAY).json({ message: accessToken.message });
      }
-     const token = accessToken.accessToken;
+    const token = accessToken.accessToken;
     const video = await prisma.video.findUnique({
       where: {
         id: videoId,
@@ -159,14 +170,10 @@ export const uploadVideotoYoutube = async (req: Request, res: Response) => {
     if (!video) {
       return res.status(404).json({ message: "Video not found" });
     }
-
     const inputPath = `./uploads/${dashboardId}/${videoId}`;
     const outputPath = `./uploads/${dashboardId}/file-${videoId}.mp4`;
 
-    console.log("I CAME HERE 4")
     const result = await convertChunksToVideo(inputPath, outputPath);
-        console.log("I CAME HERE 5")
-        
         if (!result.success) {
           if(fs.existsSync(outputPath))
           await fs.promises.unlink(outputPath);
@@ -176,7 +183,6 @@ export const uploadVideotoYoutube = async (req: Request, res: Response) => {
         console.log("Video converted successfully:", result.videoUrl);
         
         const youtube = google.youtube("v3");
-        console.log("I CAME HERE 6")
         const request = youtube.videos.insert(
           {
             // @ts-ignore
@@ -197,19 +203,57 @@ export const uploadVideotoYoutube = async (req: Request, res: Response) => {
           },
           async (err:any, response:any) => {
             if (err) {
-              console.error('Error uploading video:', err);
               await fs.promises.unlink(outputPath);
               return;
             }
-            console.log("I CAME HERE 7")
-        console.log('Video uploaded. Video ID:', response.data);
+            await prisma.youtubeUpload.create({
+              data:{
+                id :response.data.id,
+                title :title,
+                dashboardId :dashboardId,
+              }
+            })
             await fs.promises.unlink(outputPath);
       }
     );
-
-     return res.json({ message: "Video uploaded successfully" });
+     return res.json({ message: "Video uploaded successfully"});
   } catch (error) {
     console.error("Error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+export const downloadVideo = async (req: Request, res: Response) => {
+  try {
+    const { videoId, dashboardId } = req.params;
+    if (!videoId || !dashboardId) {
+      return res.status(HttpStatusCode.BAD_REQUEST).json({ message: 'Video ID and dashboard ID are required' });
+    }
+    const video = await prisma.video.findUnique({
+      where: {
+        id: videoId,
+        dashboardId: dashboardId,
+      },
+    });
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+    const filePath = path.resolve(video.url);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    res.setHeader("Content-Disposition", `attachment; filename="${path.basename(filePath)}"`);
+    res.setHeader("Content-Type", "video/mp4");
+
+    res.download(filePath, (err) => {
+      if (err) {
+        console.error("Error downloading file:", err);
+        return res.status(500).json({ message: "Error downloading file" });
+      }
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}

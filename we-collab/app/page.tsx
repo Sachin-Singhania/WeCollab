@@ -5,64 +5,26 @@ import Features from './components/Features'
 import HowItWorks from './components/HowItWorks'
 import CTA from './components/CTA'
 import JoinOrCreate from './components/JoinOrCreate'
-import axios from 'axios'
-import useUserStore from './store/store'
-import useDashboardStore from './store/dashboard'
+ import ProtectedRoute from './components/Protected'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-
+import useUserStore from './store/store'
 export default function Home() {
   const [showJoinOrCreate, setShowJoinOrCreate] = useState(false)
 
   const toggleJoinOrCreate = () => {
     setShowJoinOrCreate(!showJoinOrCreate)
   }
-  const navigator = useRouter();
-
-  //@ts-ignore
-  const setUser = useUserStore((state) => state.setUser);
-  //@ts-ignore
-  const {setDashboard,setRole,role,dashboard} = useDashboardStore();
+  const {user} = useUserStore();
+  const router= useRouter();
+  const { data: session, status } = useSession();
   useEffect(() => {
-    const getUser= async()=>{
-      try {
-        const response= await axios.get('http://localhost:3010/user/api/v1/user/get',{
-          withCredentials : true
-        });
-        console.log(response.data);
-        setUser(response.data);
-      } catch (error) {
-        return;
-      } 
+    if (status === "authenticated") {
+      router.push("/dashboard");
+    }else{
+      return;
     }
-    const getDashboard= async()=>{
-      try {
-        if (dashboard && role ) return;
-         const response = await axios.get('http://localhost:3010/dashboard/api/v1/dashboard/get',{
-          withCredentials : true
-         });
-         if(response.data.error){
-          return;
-         }
-         const data= response.data[0];
-         console.log(data)
-         setRole(data.role);
-         setDashboard(data.dashbaord);
-         console.log("done")
-         navigator.push(`/dashboard/${data?.role.toLowerCase()}`);
-
-      } catch (error) {
-        return;
-      }
-    }
-    getUser();
-    getDashboard();
-  },  [])
-  // useEffect(() => {
-  //   if (dashboard && role) {
-  //     navigator.push(`/dashboard/${role.toLowerCase()}`);
-  //   }
-  // }, [dashboard, role, navigator]);
-  
+  }, [session, status,user]);
   return (
     <main className="min-h-screen bg-white relative z-0">
       <Hero onGetStarted={toggleJoinOrCreate} />

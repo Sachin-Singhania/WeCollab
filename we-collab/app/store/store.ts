@@ -1,12 +1,16 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 export interface User{
     id: string;
     email : string;
     jwtToken : string;
 }
-const useUserStore = create(
+interface UserState {
+    user : User | null;
+    setUser: (user: User) => void;
+    logout: () => void;
+  }
+const useUserStore = create<UserState>()(
         (set) => ({
             user: null,
             setUser: (user: User) => set({ user }),

@@ -3,12 +3,23 @@ import { create } from 'zustand';
 interface Dashboard {
   id: string;
   name: string;
-  Video : Video[]
+  Video : Video[];
+  YoutubeUploads? : youtubeUploads[];
+  Request?: Request[];
 }
+interface  Request {
+  id: string;
+  userId: string;
+};
 interface Video {
   id: string;
   name : string;
+  uploadedBy : string
 }
+interface youtubeUploads {
+  id: string;
+  title: string;
+};
 type Role = "EDITOR" | "OWNER";
 interface DashboardState {
   dashboard: Dashboard | null;

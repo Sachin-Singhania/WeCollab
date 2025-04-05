@@ -21,6 +21,7 @@ model Dashboard{
   users       DashboardUser[]
   Video Video[]
   Request Request[]
+  YoutubeUpload YoutubeUpload[]
 }
 model DashboardUser {
   id          String        @id 
@@ -47,6 +48,15 @@ model Video{
   name String
   description String
   url String
+  dashboardId String
+   uploadedBy  String? 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  dashboard Dashboard @relation(fields: [dashboardId], references: [id])
+}
+model YoutubeUpload{
+  id String @id
+  title String
   dashboardId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

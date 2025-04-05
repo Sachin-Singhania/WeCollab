@@ -3,6 +3,7 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { cookies } from "next/headers";
+import { toast } from "sonner";
 export const authOptions = NextAuth({
     providers: [
         GoogleProvider({
@@ -10,7 +11,7 @@ export const authOptions = NextAuth({
             clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
             authorization:{
                 params :{
-                    scope: "openid  https://www.googleapis.com/auth/youtube.upload",
+                    scope: "openid email profile https://www.googleapis.com/auth/youtube.upload",
                     redirect_uri :'http://localhost:3000/api/auth/callback/google',
                     access_type: "offline",
                     prompt : "consent",
@@ -24,9 +25,6 @@ export const authOptions = NextAuth({
                 if (!account.scope?.includes("youtube.upload")) {
                     throw new Error("Missing required permissions: youtube.upload");
                 }
-                console.log(account);
-                console.log(token);
-
                 token.accessToken = account.access_token;
                 token.refreshToken = account.refresh_token;
                 token.expiresAt = account.expires_at; 
@@ -46,19 +44,17 @@ export const authOptions = NextAuth({
                         }
                     });
                 } catch (error) {
-                    console.error("Failed to send tokens to backend:");
                     throw new Error("Failed to store authentication tokens.");
                 }
             }
             return token;
         },
         async session({ session, token }) {
-            //@ts-ignore
-            session.accessToken = token.accessToken;
-            //@ts-ignore
-            session.refreshToken = token.refreshToken;
-            //@ts-ignore
-            session.expiresAt = token.expiresAt;
+            session.user = {
+                name: token.name,
+                email: token.email,
+                image: token.picture,
+              };
            
             return session;
             },       

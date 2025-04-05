@@ -4,11 +4,13 @@ import { v4 as uuid } from 'uuid';
 import fs from 'fs';
 const storage = multer.diskStorage({
   destination: async function (req, file, cb) {
-    console.log("I CAM HERE 2");
-    if (!fs.existsSync("uploads")) {
-      fs.mkdirSync("uploads", { recursive: true });
+    const { dashboardId } = req.body;
+      console.log("Received dashboardId:", dashboardId); 
+    const dashboardPath = path.join("uploads", dashboardId);
+    if (!fs.existsSync(dashboardPath)) {
+      fs.mkdirSync(dashboardPath, { recursive: true });
     }
-      cb(null, "uploads"); 
+      cb(null, dashboardPath); 
   },
   filename: (req, file, cb) => {
     const uniqueName = uuid();
