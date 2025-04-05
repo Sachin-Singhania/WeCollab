@@ -2,7 +2,6 @@
 
 WeCollab adds a security layer between video editors and YouTube channel owners, ensuring that editors do not have direct upload access to the owner's YouTube channel. Instead of granting full editor permissions on YouTube, WeCollab provides a controlled and secure way to share and manage video uploads.
 ## Features
-
 - **No Need to Grant Direct Editor Access**: Share and upload videos securely without giving your editor full YouTube access.
 - **Easy Video Sharing**: Upload videos directly through WeCollab without downloading and re-uploading.
 - **Video-on-Demand Feature**: View your final video before uploading it to YouTube.
@@ -10,6 +9,17 @@ WeCollab adds a security layer between video editors and YouTube channel owners,
 - **YouTube OAuth Integration**: Uses NextAuth for obtaining upload permissions.
 - **Secure Uploads**: Editors can upload videos without needing full YouTube account access.
 - **Role-Based Access Control**: Ensures only authorized users can manage video uploads.
+
+## Home Page
+![image](https://github.com/user-attachments/assets/57d2ea5b-83a0-48fb-81e1-d66a8c25a105)
+![image](https://github.com/user-attachments/assets/969f8635-67f8-4da4-8c0a-1ddbd935f19e)
+## Owner
+![image](https://github.com/user-attachments/assets/e4622568-90e4-4ad3-8076-2f5a59763c19)
+## Editor
+![image](https://github.com/user-attachments/assets/007aea02-520e-4ce1-888e-339f8261c456)
+
+
+
 
 ## Tech Stack
 - **Frontend**: Next.js, React, Tailwind CSS
