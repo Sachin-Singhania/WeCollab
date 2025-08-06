@@ -2,6 +2,7 @@
 
 WeCollab adds a security layer between video editors and YouTube channel owners, ensuring that editors do not have direct upload access to the owner's YouTube channel. Instead of granting full editor permissions on YouTube, WeCollab provides a controlled and secure way to share and manage video uploads.
 ## Features
+- **One Click Upload From Anywhere**: Upload your video from anywhere in the world 
 - **No Need to Grant Direct Editor Access**: Share and upload videos securely without giving your editor full YouTube access.
 - **Easy Video Sharing**: Upload videos directly through WeCollab without downloading and re-uploading.
 - **Video-on-Demand Feature**: View your final video before uploading it to YouTube.
